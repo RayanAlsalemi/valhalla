@@ -491,11 +491,14 @@ void test_hierarchy_warning(const Options_Action& action, const Costing_Type& ty
   options.set_action(action);
   options.set_costing_type(type);
 
-  // Set pseudo locations
-  auto* source = options.mutable_locations()->Add();
+  // Trace actions use shape points; other actions use locations.
+  auto* points = action == Options_Action_trace_route || action == Options_Action_trace_attributes
+                     ? options.mutable_shape()
+                     : options.mutable_locations();
+  auto* source = points->Add();
   source->mutable_ll()->set_lat(46.f);
   source->mutable_ll()->set_lng(8.f);
-  auto* target = options.mutable_locations()->Add();
+  auto* target = points->Add();
   target->mutable_ll()->set_lat(47.f);
   target->mutable_ll()->set_lng(8.4f);
   // Set pseudo sources and targets for the matrix action
@@ -523,6 +526,8 @@ void test_hierarchy_warning(const Options_Action& action, const Costing_Type& ty
       worker.route(request);
     } else if (action == Options_Action_sources_to_targets) {
       worker.matrix(request);
+    } else {
+      worker.trace(request);
     }
   } catch (...) {}
   worker.cleanup();
@@ -602,6 +607,11 @@ TEST(LokiService, test_hierarchy_warning) {
       test_hierarchy_warning(action, type);
     }
   }
+}
+
+TEST(LokiService, test_trace_hierarchy_warning) {
+  test_hierarchy_warning(Options_Action_trace_route, Costing_Type_auto_);
+  test_hierarchy_warning(Options_Action_trace_attributes, Costing_Type_auto_);
 }
 
 } // namespace

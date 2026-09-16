@@ -410,7 +410,7 @@ void loki_worker_t::check_hierarchy_distance(Api& request) {
     return;
   }
 
-  // For route action check if total distances between locations exceed the max limit.
+  // For route and trace actions check if total distances between points exceed the max limit.
   // For matrix action, check every pair of source and target.
   bool max_distance_exceeded = false;
   if (request.options().action() == Options_Action_sources_to_targets) {
@@ -423,10 +423,13 @@ void loki_worker_t::check_hierarchy_distance(Api& request) {
       }
     }
   } else {
-    auto locations = options.locations();
+    const auto& points = request.options().action() == Options_Action_trace_route ||
+                                 request.options().action() == Options_Action_trace_attributes
+                             ? options.shape()
+                             : options.locations();
     float arc_distance = 0.0f;
-    for (auto source = locations.begin(); source != locations.end() - 1; ++source) {
-      arc_distance += to_ll(*source).Distance(to_ll(*(source + 1)));
+    for (int i = 1; i < points.size(); ++i) {
+      arc_distance += to_ll(points.Get(i - 1)).Distance(to_ll(points.Get(i)));
       if (arc_distance > max_distance_disable_hierarchy_culling) {
         max_distance_exceeded = true;
         break;
